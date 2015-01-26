@@ -2826,7 +2826,7 @@
 	var alttext = this.Get("alttext");
         if (alttext && !span.getAttribute("aria-label")) span.setAttribute("aria-label",alttext);
         if (!span.getAttribute("role")) span.setAttribute("role","math");
-        span.setAttribute("tabindex",0);
+//      span.setAttribute("tabindex",0);  // causes focus outline, so disable for now
 	var stack = HTMLCSS.createStack(span), box = HTMLCSS.createBox(stack), math;
 	// Move font-size from outer span to stack to avoid line separation 
 	// problem in strict HTML mode
@@ -2838,6 +2838,8 @@
 	  }
 	  MML.mbase.prototype.displayAlign = HUB.config.displayAlign;
 	  MML.mbase.prototype.displayIndent = HUB.config.displayIndent;
+          if (String(HUB.config.displayIndent).match(/^0($|[a-z%])/i))
+            MML.mbase.prototype.displayIndent = "0";
           var html = this.data[0].toHTML(box); html.bbox.exactW = false; // force remeasure just to be sure
 	  math = HTMLCSS.Measured(html,box);
 	}
@@ -2866,7 +2868,7 @@
 	//
 	//  Add color (if any)
 	//
-	this.HTMLhandleColor(span);
+        var color = this.HTMLhandleColor(span);
 	//
 	//  Make math span be the correct height and depth
 	//
@@ -2880,20 +2882,29 @@
 	  if (values.indentalign === MML.INDENTALIGN.AUTO) {values.indentalign = this.displayAlign}
 	  if (values.indentshiftfirst !== MML.INDENTSHIFT.INDENTSHIFT) {values.indentshift = values.indentshiftfirst}
 	  if (values.indentshift === "auto") {values.indentshift = "0"}
-          var shift = HTMLCSS.length2em(values.indentshift,1,HTMLCSS.cwidth);
-          if (this.displayIndent !== "0") {
-            var indent = HTMLCSS.length2em(this.displayIndent,1,HTMLCSS.cwidth);
-            shift += (values.indentalign === MML.INDENTALIGN.RIGHT ? -indent : indent);
-          }
+          var shift = HTMLCSS.length2em(values.indentshift,1,HTMLCSS.scale*HTMLCSS.cwidth);
+	  if (this.displayIndent !== "0") {
+	    var indent = HTMLCSS.length2em(this.displayIndent,1,HTMLCSS.scale*HTMLCSS.cwidth);
+	    shift += (values.indentalign === MML.INDENTALIGN.RIGHT ? -indent : indent);
+	  }
 	  node.style.textAlign = values.indentalign;
           // ### FIXME: make percentage widths respond to changes in container
           if (shift) {
-            shift *= HTMLCSS.scale * HTMLCSS.em/HTMLCSS.outerEm;
+            shift *= HTMLCSS.em/HTMLCSS.outerEm;
             HUB.Insert(span.style,({
               left: {marginLeft: HTMLCSS.Em(shift)},
               right: {marginLeft: HTMLCSS.Em(Math.max(0,span.bbox.w+shift)), marginRight: HTMLCSS.Em(-shift)},
               center: {marginLeft: HTMLCSS.Em(shift), marginRight: HTMLCSS.Em(-shift)}
             })[values.indentalign]);
+            //
+            //  Move the background color, of any
+            //
+            if (color) {
+              color.style.marginLeft = HTMLCSS.Em(parseFloat(color.style.marginLeft)+shift);
+              color.style.marginRight =
+                HTMLCSS.Em(parseFloat(color.style.marginRight)-shift
+                            + (values.indentalign === "right" ? Math.min(0,span.bbox.w+shift) - span.bbox.w : 0));
+            }
           }
 	}
 	return span;

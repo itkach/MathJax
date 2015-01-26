@@ -1635,12 +1635,12 @@
 	if (this.data[0] != null) {
           this.SVGgetScale(svg); this.SVGhandleSpace(svg);
           var pad = this.SVGdataStretched(0,HW,D), mu = this.SVGgetMu(svg);
-	  var values = this.getValues("height","depth","width","lspace","voffset"), x = 0, y = 0;
-	  if (values.lspace)  {x = this.SVGlength2em(pad,values.lspace,mu)}
-	  if (values.voffset) {y = this.SVGlength2em(pad,values.voffset,mu)}
-          var h = pad.h, d = pad.d, w = pad.w; // these can change durring the Add() 
-          svg.Add(pad,x,y); svg.Clean();
-          svg.h = h+pad.y; svg.d = d-pad.y; svg.w = w; svg.removeable = false;
+	  var values = this.getValues("height","depth","width","lspace","voffset"), X = 0, Y = 0;
+	  if (values.lspace)  {X = this.SVGlength2em(pad,values.lspace,mu)}
+	  if (values.voffset) {Y = this.SVGlength2em(pad,values.voffset,mu)}
+          var h = pad.h, d = pad.d, w = pad.w, y = pad.y; // these can change durring the Add() 
+          svg.Add(pad,X,Y); svg.Clean();
+          svg.h = h+y; svg.d = d-y; svg.w = w; svg.removeable = false;
 	  if (values.height !== "") {svg.h = this.SVGlength2em(svg,values.height,mu,"h",0)}
 	  if (values.depth  !== "") {svg.d = this.SVGlength2em(svg,values.depth,mu,"d",0)}
 	  if (values.width  !== "") {svg.w = this.SVGlength2em(svg,values.width,mu,"w",0)}
@@ -1666,7 +1666,7 @@
         this.SVGgetStyles();
 	var svg = this.SVG();
         this.SVGhandleSpace(svg);
-        if (d != null) {this.sh = h; this.sd = d}
+        if (d != null) {svg.sh = h; svg.sd = d}
 	for (var i = 0, m = this.data.length; i < m; i++)
           {if (this.data[i]) {svg.Check(this.data[i])}}
         svg.Stretch(); svg.Clean();
@@ -2027,6 +2027,8 @@
           this.SVGgetStyles();
 	  MML.mbase.prototype.displayAlign = HUB.config.displayAlign;
 	  MML.mbase.prototype.displayIndent = HUB.config.displayIndent;
+          if (String(HUB.config.displayIndent).match(/^0($|[a-z%])/i))
+            MML.mbase.prototype.displayIndent = "0";
           //
           //  Put content in a <g> with defaults and matrix that flips y axis.
           //  Put that in an <svg> with xlink defined.
@@ -2034,7 +2036,7 @@
           var box = BBOX.G(); box.Add(this.data[0].toSVG(),0,0,true); box.Clean();
           this.SVGhandleColor(box);
           SVG.Element(box.element,{
-            stroke:"black", fill:"black", "stroke-width":0,
+            stroke:"currentColor", fill:"currentColor", "stroke-width":0,
             transform: "matrix(1 0 0 -1 0 0)"
           });
           box.removeable = false;
@@ -2081,7 +2083,7 @@
           var alttext = this.Get("alttext");
           if (alttext && !svg.element.getAttribute("aria-label")) span.setAttribute("aria-label",alttext);
           if (!svg.element.getAttribute("role")) span.setAttribute("role","math");
-          span.setAttribute("tabindex",0);
+//        span.setAttribute("tabindex",0);  // causes focus outline, so disable for now
           span.appendChild(svg.element); svg.element = null;
           //
           //  Handle indentalign and indentshift for single-line displays

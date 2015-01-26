@@ -1359,7 +1359,7 @@
         op = top.data[top.data.length-1] = MML.munderover.apply(MML.underover,op.data);
       }
       op.movesupsub = (limits ? true : false);
-      op.movablelimits = false;
+      op.Core().movablelimits = false;
     },
     
     Over: function (name,open,close) {
@@ -1430,8 +1430,10 @@
       var pos = {o: "over", u: "under"}[name.charAt(1)];
       var base = this.ParseArg(name);
       if (base.Get("movablelimits")) {base.movablelimits = false}
-      if (base.isa(MML.munderover) && base.isEmbellished())
-        {base = MML.mrow(MML.mo().With({rspace:0}),base)}  // add an empty <mi> so it's not embellished any more
+      if (base.isa(MML.munderover) && base.isEmbellished()) {
+        base.Core().With({lspace:0,rspace:0}); // get spacing right for NativeMML
+        base = MML.mrow(MML.mo().With({rspace:0}),base);  // add an empty <mi> so it's not embellished any more
+      }
       var mml = MML.munderover(base,null,null);
       mml.SetData(
         mml[pos], 

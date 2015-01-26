@@ -357,6 +357,24 @@
     //
     MMLnamespace: "http://www.w3.org/1998/Math/MathML",
 
+    isFullWidth: function (node) {
+      if (!node) return;
+      var width = node.getAttribute("width") ||
+                  (String(node.getAttribute("style")).match(/(?:^| )width: *([^; ]*)/)||[])[1];
+      if (width) return !!width.match(/%/);
+      if (node.nodeName.match(/^(semantics|math|mstyle)$/)) {
+        width = this.isFullWidth(node.firstChild);
+      } else if (node.nodeName.toLowerCase() === "mrow") {
+        for (var i = 0, m = node.childNodes.length; i < m && !width; i++)
+          width = this.isFullWidth(node.childNodes[i]);
+      }
+      if (width) {
+        var style = "width:100%; "+(node.getAttribute("style")||"");
+        node.setAttribute("style",style.replace(/ +$/,""));
+      }
+      return width;
+    },
+    
     //
     //  For MSIE, we must overlay the MathPlayer object to trap the events
     //  (since they can't be cancelled when the events are on the <math> tag
@@ -435,6 +453,8 @@
       jax.root.toNativeMML(span);
       if (this.msieIE8HeightBug) {span.style.position = "absolute"}
       if (nMML.widthBug) {span.style.width = span.parentNode.style.width = ""}
+      if (span.parentNode.style.width.match(/%$/)) 
+        {span.parentNode.style.minWidth = Math.ceil(3*Mh/4)+"px"} // for full-width tables
       var mW = math.offsetWidth  || math.scrollWidth,
           mH = math.offsetHeight || math.scrollHeight;
       var zW = span.offsetWidth, zH = span.offsetHeight;
@@ -954,15 +974,15 @@
         }
         //
         //  Look for a top-level mtable and if it has labels
-        //    Make sure the containers have 100% width, when needed
+        //    Make sure the containers have 100% width, when needed.
         //    If the label is on the same side as alignment,
         //      override the margin set by the stylesheet.
         //
-        var mtable = ((this.data[0]||[]).data[0]||{});
+        var mtable = ((this.data[0]||{data:[]}).data[0]||{});
         if (mtable.nMMLhasLabels) {
           if (mtable.nMMLforceWidth || !mtable.nMMLlaMatch) {
-            tag.setAttribute("style","width:100%")
-            parent.style.width = parent.parentNode.style.width="100%";
+            tag.setAttribute("style","width:100%")  // mrow node
+            if (annotate) tag.parentNode.setAttribute("style","width:100%"); // semantics node
           };
           if (mtable.nMMLlaMatch) {
             if (parent.parentNode.parentNode.nodeName.toLowerCase() === "div") {
@@ -971,6 +991,11 @@
             }
           }
         }
+        //
+        //  Check if container must have width set to 100%
+        //
+        var fullWidth = nMML.isFullWidth(math);
+        if (fullWidth) {parent.style.width = parent.parentNode.style.width = "100%"}
         //
         //  Add the math to the page
         //
@@ -981,8 +1006,7 @@
         //  parent element to match.  Even if we set the <math> width properly,
         //  it doesn't seem to propagate up to the <span> correctly.
         //
-        if (nMML.widthBug &&
-            !(mtable.nMMLhasLabels && (mtable.nMMLforceWidth || !mtable.nMMLlaMatch))) {
+        if (nMML.widthBug &&!fullWidth) {
           //
           //  Convert size to ex's so that it scales properly if the print media
           //    has a different font size.
